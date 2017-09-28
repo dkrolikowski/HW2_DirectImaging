@@ -6,7 +6,24 @@ import matplotlib.pyplot as plt
 
 from astropy.io import fits
 
-datapath  = 'data/ROXs12/'
+def Gauss2D( X, p ):
+    x, y = X
+
+    xterm = np.exp( - ( x - p[0] ) ** 2.0 / ( 2.0 * p[1] ** 2.0 ) )
+    yterm = np.exp( - ( y - p[2] ) ** 2.0 / ( 2.0 * p[3] ** 2.0 ) )
+
+    gauss = p[4] * xterm * yterm[:,np.newaxis] + p[5]
+
+    return gauss
+
+def least( p, args ):
+    X, vals, func = args
+
+    dif = vals - func( X, p )
+
+    return dif.ravel()
+
+datapath  = '../data/ROXs12/'
 datafiles = glob.glob( datapath + '*' )
 
 test   = fits.open( datafiles[0] )[0].data
@@ -19,33 +36,21 @@ for i in range( frames.shape[0] ):
     frames[i] = f.data
     heads.append( f.header )
 
-psf = np.median( frames, axis = 0 )
+# Finding star behind coronagraph
+roughx  = 470
+roughy  = 612
+centers = np.zeros( ( frames.shape[0], 2 ) )
 
-#plt.clf()
-#plt.imshow( frames[8] )
-#plt.show()
+for i in range( frames.shape[0] ):
+    tofit = frames[i,roughx-15:roughx+15,roughy-15:roughy+15]
+    x = np.arange( tofit.shape[1] )
+    y = np.arange( tofit.shape[0] )
 
-def Gauss2D( X, p ):
-    x, y = X
+    p0 = [ 15, 2, 15, 2, tofit[15,15], np.median(tofit) ]
 
-    xterm = np.exp( - ( x - p[0] ) ** 2.0 / ( 2.0 * p[1] ** 2.0 ) )
-    yterm = np.exp( - ( y - p[2] ) ** 2.0 / ( 2.0 * p[3] ** 2.0 ) )
+    fit, res = mpyfit.fit( least, p0, ( ( x, y ), tofit, Gauss2D ) )
+    
+    centers[i] = np.array( [ fit[2] + roughx - 15, fit[0] + roughy - 15 ] )
 
-    gauss = p[4] * xterm * yterm[:,np.newaxis]
+print centers
 
-    return gauss
-
-def least( p, args ):
-    X, vals, func = args
-
-    dif = vals - func( X, p )
-
-    return dif.ravel()
-
-x = np.arange( 1024 )
-y = np.arange( 1024 )
-
-p = [ 300, 8, 500, 8, 1000 ]
-plt.clf()
-plt.imshow( Gauss2D( ( x, y ), p ) + frames[8] )
-plt.show()
