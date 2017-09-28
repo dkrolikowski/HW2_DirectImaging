@@ -23,7 +23,7 @@ def least( p, args ):
 
     return dif.ravel()
 
-datapath  = '../data/ROXs12/'
+datapath  = 'data/ROXs12/'
 datafiles = glob.glob( datapath + '*' )
 
 test   = fits.open( datafiles[0] )[0].data
@@ -42,15 +42,16 @@ roughy  = 612
 centers = np.zeros( ( frames.shape[0], 2 ) )
 
 for i in range( frames.shape[0] ):
-    tofit = frames[i,roughx-15:roughx+15,roughy-15:roughy+15]
+    boxw  = 10
+    tofit = frames[i,roughx-boxw:roughx+boxw,roughy-boxw:roughy+boxw]
     x = np.arange( tofit.shape[1] )
     y = np.arange( tofit.shape[0] )
 
-    p0 = [ 15, 2, 15, 2, tofit[15,15], np.median(tofit) ]
+    p0 = [ boxw, 2, boxw, 2, tofit[boxw,boxw], np.median(tofit) ]
 
     fit, res = mpyfit.fit( least, p0, ( ( x, y ), tofit, Gauss2D ) )
     
-    centers[i] = np.array( [ fit[2] + roughx - 15, fit[0] + roughy - 15 ] )
+    centers[i] = np.array( [ fit[2] + roughx - boxw, fit[0] + roughy - boxw] )
 
 print centers
 
