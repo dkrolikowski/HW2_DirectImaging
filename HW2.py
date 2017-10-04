@@ -1,4 +1,4 @@
-import glob, pdb, mpyfit, scipy.interpolate, scipy.ndimage
+import glob, pdb, mpyfit, scipy.interpolate, scipy.ndimage, pickle
 
 import numpy as np
 import matplotlib as mpl
@@ -70,54 +70,35 @@ def register( frame, center, setpos ):
 
     return frmshift
 
-def rotate( frame, ang, setpos ):
-    ang    = np.radians( ang )
-    frmrot = frame.copy()
-    frmint = scipy.interpolate.interp2d( np.arange( frame.shape[0] ), np.arange( frame.shape[1] ), frame, kind = 'cubic' )
-
-    xarr  = np.arange( frame.shape[0] )
-    yarr  = np.arange( frame.shape[1] )
-
-    for x in xarr:
-        for y in yarr:
-            xs  = x - setpos[0]
-            ys  = y - setpos[1]
-            xr  = ( xs * np.cos( ang ) - ys * np.sin( ang ) ) + setpos[0]
-            yr  = ( xs * np.sin( ang ) + ys * np.cos( ang ) ) + setpos[1]
-            pix = frmint( yr, xr )
-            frmrot[x,y] = pix
-
-    return frmrot
-
 regfrms = frms.copy()
 rotfrms = frms.copy()
 
 for i in range( frms.shape[0] ):
 
+    print i
     PA = heads[i]['PARANG'] + heads[i]['ROTPPOSN'] - heads[i]['EL'] - heads[i]['INSTANGL']
     
     regfrms[i] = register( frms[i], centers[i], [ 511, 511 ] )
-    print i, PA
-    #rotfrms[i] = rotate( regfrms[i], PA, starpos )
-    rotfrms[i] = scipy.ndimage.interpolation.rotate( regfrms[i], PA, reshape = False )
+    rotfrms[i] = scipy.ndimage.interpolation.rotate( regfrms[i], -(180 + PA), reshape = False )
 
-regmed = np.median( regfrms, axis = 0 )
-regsum = np.sum( regfrms, axis = 0 )
-rotmed = np.median( rotfrms, axis = 0 )
-rotsum = np.sum( rotfrms, axis = 0 )
+pickle.dump( regfrms, open( 'ims_reg.pkl', 'wb' ) )
+pickle.dump( rotfrms, open( 'ims_rot.pkl', 'wb' ) )
 
-pdb.set_trace()
+## Tests for radial profile
 
-plt.figure()
-plt.imshow( regsum )
+oneside = np.arange( 1024 ) - 511.5
+distmat = np.sqrt( oneside ** 2.0 + np.array( [ oneside ] ).T ** 2.0 )
 
-plt.figure()
-plt.imshow( rotsum )
-plt.show()
+i = 8
+dist1d = distmat.ravel()
+frm1d  = rotfrms[8].ravel()
 
-plt.figure()
-plt.imshow( regmed )
+dist1ds = dist1d[np.argsort(dist1d)]
+frm1ds  = frm1d[np.argsort(dist1d)]
 
-plt.figure()
-plt.imshow( rotmed )
-plt.show()
+distsplit = np.unique( dist1ds )
+frmsplit  = np.split( frm1ds, np.where( np.diff( dist1ds ) > 0 )[0] + 1 )
+
+meds = np.zeros( distsplit.size )
+for i in range( meds.size ):
+    meds[i] = np.median( frmsplit[i] )
