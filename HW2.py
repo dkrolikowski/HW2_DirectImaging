@@ -55,50 +55,92 @@ for i in range( frms.shape[0] ):
     
     centers[i] = np.array( [ fit[2] + starpos[0] - boxw, fit[0] + starpos[1] - boxw ] )
 
-## Part 3 -- Shift images so star is at some x/y position
+## Part 3/4 -- Shift images so star is at some x/y position
 
-def register( frame, center, setpos ):
+def Register( frame, center, setpos ):
 
-    delx = 1 - ( center[0] - setpos[0] )
-    dely = 1 - ( center[1] - setpos[1] )
+    delx     = 1 - ( center[0] - setpos[0] )
+    dely     = 1 - ( center[1] - setpos[1] )
 
-    xnew = np.linspace( -delx, frame.shape[0] - 1 - delx, frame.shape[0] )
-    ynew = np.linspace( -dely, frame.shape[1] - 1 - dely, frame.shape[1] )
+    xnew     = np.linspace( -delx, frame.shape[0] - 1 - delx, frame.shape[0] )
+    ynew     = np.linspace( -dely, frame.shape[1] - 1 - dely, frame.shape[1] )
 
     frmint   = scipy.interpolate.interp2d( np.arange( frame.shape[0] ), np.arange( frame.shape[1] ), frame, kind = 'cubic' )
     frmshift = frmint( ynew, xnew )
 
     return frmshift
 
-regfrms = frms.copy()
-rotfrms = frms.copy()
+# regfrms = frms.copy()
+# rotfrms = frms.copy()
 
-for i in range( frms.shape[0] ):
+# for i in range( frms.shape[0] ):
 
-    print i
-    PA = heads[i]['PARANG'] + heads[i]['ROTPPOSN'] - heads[i]['EL'] - heads[i]['INSTANGL']
+#     print i
+#     PA = heads[i]['PARANG'] + heads[i]['ROTPPOSN'] - heads[i]['EL'] - heads[i]['INSTANGL']
+
+#     regfrms[i] = Register( frms[i], centers[i], [ 511, 511 ], -(180+PA) )
+#     rotfrms[i] = scipy.ndimage.interpolation.rotate( regfrms[i], -(180+PA), reshape = False )
+
+# pickle.dump( regfrms, open( 'ims_reg.pkl', 'wb' ) )
+# pickle.dump( rotfrms, open( 'ims_rot.pkl', 'wb' ) )
+
+regfrms = pickle.load( open( 'ims_reg.pkl', 'rb' ) )
+rotfrms = pickle.load( open( 'ims_rot.pkl', 'rb' ) )
+
+regmed  = np.median( regfrms, axis = 0 )
+regsum  = np.sum( regfrms, axis = 0 )
+rotmed  = np.median( rotfrms, axis = 0 )
+rotsum  = np.sum( rotfrms, axis = 0 )
+
+## Part 5 -- Subtract off the brightness profile
+
+def BrightProfile( frm ):
+
+    oneside = np.arange( 1024 ) - 511.5
+    distmat = np.sqrt( oneside ** 2.0 + np.array( [ oneside ] ).T ** 2.0 )
+
+    dist1d  = distmat.ravel()
+    frm1d   = frm.ravel()
+    dist1ds  = dist1d[np.argsort(dist1d)]
+    frm1ds   = frm1d[np.argsort(dist1d)]
+
+    distfit = np.linspace( 1, 723, 724 / 2 )
+    medians = []
+
+    for d in distfit:
+        region = np.where( ( dist1ds >= d - 1.0 ) & ( dist1ds <= d + 1.0 ) )[0]
+        medians.append( np.median( frm1ds[region] ) )
+
+    splfit  = scipy.interpolate.UnivariateSpline( distfit, medians )
+
+    return frm - splfit( distmat )
+
+# subfrms = rotfrms.copy()
+
+# for i in range( subfrms.shape[0] ):
     
-    regfrms[i] = register( frms[i], centers[i], [ 511, 511 ] )
-    rotfrms[i] = scipy.ndimage.interpolation.rotate( regfrms[i], -(180 + PA), reshape = False )
+#     subfrms[i] = BrightProfile( subfrms[i] )
 
-pickle.dump( regfrms, open( 'ims_reg.pkl', 'wb' ) )
-pickle.dump( rotfrms, open( 'ims_rot.pkl', 'wb' ) )
+# pickle.dump( subfrms, open( 'ims_sub.pkl', 'wb' ) )
 
-## Tests for radial profile
+subfrms = pickle.load( open( 'ims_sub.pkl', 'rb' ) )
+    
+submed = np.median( subfrms, axis = 0 )
+subsum = np.sum( subfrms, axis = 0 )
 
-oneside = np.arange( 1024 ) - 511.5
-distmat = np.sqrt( oneside ** 2.0 + np.array( [ oneside ] ).T ** 2.0 )
+## Part 6 -- Median PSF subtraction
 
-i = 8
-dist1d = distmat.ravel()
-frm1d  = rotfrms[8].ravel()
+psfsubfrms = regfrms.copy()
 
-dist1ds = dist1d[np.argsort(dist1d)]
-frm1ds  = frm1d[np.argsort(dist1d)]
+for i in range( regfrms.shape[0] ):
 
-distsplit = np.unique( dist1ds )
-frmsplit  = np.split( frm1ds, np.where( np.diff( dist1ds ) > 0 )[0] + 1 )
+    PA = heads[i]['PARANG'] + heads[i]['ROTPPOSN'] - heads[i]['EL'] - heads[i]['INSTANGL']
 
-meds = np.zeros( distsplit.size )
-for i in range( meds.size ):
-    meds[i] = np.median( frmsplit[i] )
+    psfsubfrms[i] -= regmed
+    psfsubfrms[i] = scipy.ndimage.interpolation.rotate( psfsubfrms[i], -(180+PA), reshape = False )
+
+psfsubmed = np.median( psfsubfrms, axis = 0 )
+psfsubsum = np.sum( psfsubfrms, axis = 0 )
+
+plt.imshow( regfrms[8] / regmed )
+plt.show()
