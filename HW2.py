@@ -142,5 +142,5 @@ for i in range( regfrms.shape[0] ):
 psfsubmed = np.median( psfsubfrms, axis = 0 )
 psfsubsum = np.sum( psfsubfrms, axis = 0 )
 
-plt.imshow( regfrms[8] / regmed )
+plt.imshow( psfsubmed )
 plt.show()
