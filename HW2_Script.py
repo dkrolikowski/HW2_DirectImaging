@@ -30,12 +30,16 @@ regfrms_ROXs12 = fns.Register( frms_ROXs12, centers_ROXs12 )
 regmed_ROXs12, regsum_ROXs12 = fns.StackFrames( regfrms_ROXs12 )
 
 pd.DataFrame( { 'File': ROXs12, 'X': centers_ROXs12[:,0], 'Y': centers_ROXs12[:,1] }).to_csv( 'ROXs12starpos.txt', index = False )
+fits.writeto('ROXs12_registeredmedian.fits', regmed_ROXs12)
+fits.writeto('ROXs12_registeredsum.fits', regsum_ROXs12)
 
 centers_roxs42 = fns.FindStar( frms_ROXs42, [ 470, 611 ] )
 regfrms_ROXs42 = fns.Register( frms_ROXs42, centers_ROXs42 )
 regmed_ROXs42, regsum_ROXs42 = fns.StackFrames( regfrms_ROXs42 )
 
 pd.DataFrame( { 'File': ROXs42, 'X': centers_ROXs42[:,0], 'Y': centers_ROXs42[:,1] }).to_csv( 'ROXs42starpos.txt', index = False )
+fits.writeto('ROXs42_registeredmedian.fits', regmed_ROXs42)
+fits.writeto('ROXs42_registeredsum.fits', regsum_ROXs42)
 
 ###
 
@@ -44,8 +48,15 @@ pd.DataFrame( { 'File': ROXs42, 'X': centers_ROXs42[:,0], 'Y': centers_ROXs42[:,
 rotfrms_ROXs12 = fns.Rotate( regfrms_ROXs12, heads_ROXs12 )
 rotmed_ROXs12, rotsum_ROXs12 = fns.StackFrames( rotfrms_ROXs12 )
 
+fits.writeto('ROXs12_rotatedmedian.fits', rotmed_ROXs12)
+fits.writeto('ROXs12_rotatedsum.fits', rotsum_ROXs12)
+
+
 rotfrms_ROXs42 = fns.Rotate( regfrms_ROXs42, heads_ROXs42 )
 rotmed_ROXs42, rotsum_ROXs42 = fns.StackFrames( rotfrms_ROXs42 )
+
+fits.writeto('ROXs42_rotatedmedian.fits', rotmed_ROXs42)
+fits.writeto('ROXs42_rotatedsum.fits', rotsum_ROXs42)
 
 ###
 
@@ -54,8 +65,14 @@ rotmed_ROXs42, rotsum_ROXs42 = fns.StackFrames( rotfrms_ROXs42 )
 bfsubfrms_ROXs12 = fns.SubBrightProf( rotfrms_ROXs12 )
 bfsubmed_ROXs12, bfsubsum_ROXs12 = fns.StackFrames( bfsubfrms_ROXs12 )
 
+fits.writeto('ROXs12_bprofilemedian.fits', bfsubmed_ROXs12)
+fits.writeto('ROXs12_bprofilesum.fits', bfsubsum_ROXs12)
+
 bfsubfrms_ROXs42 = fns.SubBrightProf( rotfrms_ROXs42 )
 bfsubmed_ROXs42, bfsubsum_ROXs42 = fns.StackFrames( bfsubfrms_ROXs42 )
+
+fits.writeto('ROXs42_bprofilemedian.fits', bfsubmed_ROXs42)
+fits.writeto('ROXs42_bprofilesum.fits', bfsubsum_ROXs42)
 
 ###
 
@@ -64,8 +81,14 @@ bfsubmed_ROXs42, bfsubsum_ROXs42 = fns.StackFrames( bfsubfrms_ROXs42 )
 medpsfsubfrms_ROXs12 = fns.SubMedPSF( regfrms_ROXs12, heads_ROXs12, regmed_ROXs12 )
 medpsfsubmed_ROXs12, medpsfsubsum_ROXs12 = fns.StackFrames( medpsfsubfrms_ROXs12 )
 
+fits.writeto('ROXs12_medpsfmedian.fits', medpsfsubmed_ROXs12)
+fits.writeto('ROXs12_medpsfsum.fits', medpsfsubsum_ROXs12)
+
 medpsfsubfrms_ROXs42 = fns.SubMedPSF( regfrms_ROXs42, heads_ROXs42, regmed_ROXs42 )
 medpsfsubmed_ROXs42, medpsfsubsum_ROXs42 = fns.StackFrames( medpsfsubfrms_ROXs42 )
+
+fits.writeto('ROXs42_medpsfmedian.fits', medpsfsubmed_ROXs42)
+fits.writeto('ROXs42_medpsfsum.fits', medpsfsubsum_ROXs42)
 
 ###
 
@@ -75,11 +98,15 @@ comppsfsubfrms_ROXs12, bestcomp_ROXs12 = fns.BestCompPSF( regfrms_ROXs12, heads_
 comppsfsubmed_ROXs12, comppsfsubsum_ROXs12 = fns.StackFrames( comppsfsubfrms_ROXs12 )
 
 pd.DataFrame( { 'ROXs12File': ROXs12, 'ROXs42 Best Comp': ROXs42[bestcomp_ROXs12] } ).to_csv( 'ROXs12BestPSF.txt' )
+fits.writeto('ROXs12_comppsfmedian.fits', comppsfsubmed_ROXs12)
+fits.writeto('ROXs12_comppsfsum.fits', comppsfsubsum_ROXs12)
 
 comppsfsubfrms_ROXs42, bestcomp_ROXs42 = fns.BestCompPSF( regfrms_ROXs42, heads_ROXs42, regfrms_ROXs12 )
 comppsfsubmed_ROXs42, comppsfsubsum_ROXs42 = fns.StackFrames( comppsfsubfrms_ROXs42 )
 
 pd.DataFrame( { 'ROXs42File': ROXs42, 'ROXs12 Best Comp': ROXs12[bestcomp_ROXs42] } ).to_csv( 'ROXs42BestPSF.txt' )
+fits.writeto('ROXs42_comppsfmedian.fits', comppsfsubmed_ROXs42)
+fits.writeto('ROXs42_comppsfsum.fits', comppsfsubsum_ROXs42)
 
 ###
 
