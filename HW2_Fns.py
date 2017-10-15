@@ -1,6 +1,10 @@
-import mpyfit
+import mpyfit, pdb
 
 import numpy as np
+
+import matplotlib as mpl
+mpl.use('TkAgg')
+import matplotlib.pyplot as plt
 
 from astropy.io import fits
 from scipy.interpolate import interp2d, UnivariateSpline
@@ -118,14 +122,58 @@ def SubBrightProf( frms ):
 def SubMedPSF( frms, heads, PSF ):
 
     subfrms = frms.copy()
+    oneside = np.arange( 1024 ) - 511.5
+    distmat = np.sqrt( oneside ** 2.0 + np.array( [ oneside ] ).T ** 2.0 )
 
     for i in range( frms.shape[0] ):
-
-        subfrms[i] -= PSF
+        
+        fluxratio = subfrms[i] / PSF
+        medratio  = np.median( fluxratio[np.where( ( distmat >= 5 ) & ( distmat <= 55 ) )] )
+        
+        subfrms[i] -= medratio * PSF
 
     subfrms = Rotate( subfrms, heads )
 
     return subfrms
 
-        
+def BestCompPSF( frms, heads, compfrms ):
 
+    subfrms  = frms.copy()
+    bestcomp = np.zeros( frms.shape[0], dtype = np.int )
+
+    oneside  = np.arange( 1024 ) - 511.5
+    distmat  = np.sqrt( oneside ** 2.0 + np.array( [ oneside ] ).T ** 2.0 )
+
+    for i in range( frms.shape[0] ):
+        print i
+        chisq = np.zeros( compfrms.shape[0] )
+        ratio = np.zeros( compfrms.shape[0] )
+
+        for j in range( compfrms.shape[0] ):
+            print j
+            fluxratio  = subfrms[i] / compfrms[j]
+            medratio   = np.median( fluxratio[np.where( ( distmat >= 5 ) & ( distmat <= 55 ) )] )
+            ratio[j]   = medratio
+
+            compregion = np.where( distmat <= 100 )
+            resids     = subfrms[i,compregion] - medratio * compfrms[j,compregion]
+            chisq[j]   = np.sum( resids ** 2.0 / subfrms[i,compregion] )
+        
+        best = np.argmin( chisq )
+
+        bestcomp[i] = best
+        subfrms[i] -= ratio[best] * compfrms[best]
+
+    subfrms = Rotate( subfrms, heads )
+
+    return subfrms, bestcomp
+
+def PlanetSepPA( frm, planetpos, pixscale ):
+
+    foundpos = FindStar( np.array( [ frm ] ), planetpos )[0]
+
+    sep = np.sqrt( np.sum( ( foundpos - np.array([511.5,511.5]) ) ** 2.0 ) ) * pixscale
+    PA  = np.arctan2( foundpos[0] - 511.5, foundpos[1] - 511.5 ) + np.pi / 2.0
+
+    PA  = np.degrees( PA ) % 360
+    return sep, PA
